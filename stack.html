@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stack Visualization and Data Display</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: space-between;
+        }
+        #stackContainer {
+            display: flex;
+            flex-direction: column-reverse;
+            width: 400px;
+            border: 1px solid black;
+            padding: 10px;
+            height: 500px; 
+            overflow: auto;
+        }
+        #dataContainer, #worktapeContainer, #outputtapeContainer {
+            display: flex;
+            /* flex-direction: column-reverse; */
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 1200px;
+            border: 1px solid black;
+            padding: 10px;
+            height: 100px; 
+            overflow: auto;
+        }
+        .stackElement, .dataElement {
+            margin-bottom: 0;
+            border-bottom: 1px solid #ccc;
+        }
+        .vertical-layout {
+            display: flex;
+            flex-direction: column;
+        }
+        #pushButton, #popButton, #binarySearchButton, #resetButton {
+            display: inline-block;
+            margin-left: 20px;
+        }
+        #stackSize, #binarySearchList, #binarySearchTarget {
+            margin-top: 20px;
+            width: 200px;
+        }
+        #stateContainer {
+            margin-top: 20px;
+        }
+        #currentState {
+            font-weight: bold;
+        }
+        #times {
+            margin-top: 20px;
+        }
+        #customImage {
+            width: 500px;  /* Set the width of the image */
+            height: 500px;  /* Set the height of the image */
+        }
+        #space1 {
+            width: 2px;
+            height: 2px;
+        }
+        #space2 {
+            width: 80px;
+            height: 80px;
+        }
+        
+
+
+    </style>
+</head>
+<body>
+    <div>
+        <div id="stackContainer"></div>
+        <button id="pushButton">push</button>
+        <button id="popButton">pop</button>
+        <button id="resetButton">reset</button>
+        <input type="text" id="inputBox" />
+        <div id="stackSize">Stack Size: 0</div> 
+    </div>
+
+
+    <script>
+        window.onload = function() {
+            var socket = new WebSocket("ws://localhost:8888/stacksocket");
+
+            socket.onopen = function(event) {
+                socket.send("Hello Server");
+            };
+
+            var data; 
+
+            document.getElementById('pushButton').addEventListener('click', function(){
+                var inputBoxValue = document.getElementById('inputBox').value;
+                if (inputBoxValue == '') {return;}
+                socket.send(inputBoxValue);  // 发送输入框中的值给后端
+            });
+
+            document.getElementById('popButton').addEventListener('click', function() {
+                //检测栈是否为空
+                socket.send("pop"); 
+                document.getElementById('stackSize').innerText = 'Stack Size: 0';
+            });
+
+            document.getElementById('resetButton').addEventListener('click', function() {
+                socket.send("reset"); 
+                document.getElementById('stackSize').innerText = 'Stack Size: 0';
+            });
+
+            socket.onmessage = function(event) {
+                console.log("Received data from server: ", event.data);
+                alldata = JSON.parse(event.data); 
+
+                var stackContainer = document.getElementById('stackContainer');
+
+                data = alldata.stack; //函数栈中元素
+
+                while(stackContainer.firstChild) {
+                    stackContainer.firstChild.remove();
+                }
+
+                for(var i = 0; i < data.length; i++) {
+                    var stackElement = document.createElement('div');
+                    stackElement.textContent = data[i];
+                    stackElement.className = 'stackElement';
+                    stackContainer.appendChild(stackElement);
+                }
+
+
+                document.getElementById('stackSize').innerText = 'Stack Size: ' + data.length;
+
+            };
+
+            socket.onclose = function(event) {
+                console.log("Client notified socket has closed",event);
+            };
+
+            socket.onerror = function(error) {
+                console.log("Error: " + error);
+            };
+        }
+    </script>
+</body>
+</html> 

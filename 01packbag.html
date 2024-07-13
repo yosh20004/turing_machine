@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stack Visualization and Data Display</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: space-between;
+        }
+        #stackContainer {
+            display: flex;
+            flex-direction: column-reverse;
+            width: 400px;
+            border: 1px solid black;
+            padding: 10px;
+            height: 500px; 
+            overflow: auto;
+        }
+        #dataContainer, #worktapeContainer, #outputtapeContainer {
+            display: flex;
+            /* flex-direction: column-reverse; */
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 1200px;
+            border: 1px solid black;
+            padding: 10px;
+            height: 100px; 
+            overflow: auto;
+        }
+        .stackElement, .dataElement {
+            margin-bottom: 0;
+            border-bottom: 1px solid #ccc;
+        }
+        .vertical-layout {
+            display: flex;
+            flex-direction: column;
+        }
+        #sendButton, #resetButton, #binarySearchButton {
+            display: inline-block;
+            margin-left: 20px;
+        }
+        #stackSize, #binarySearchList, #binarySearchTarget, #capacity {
+            margin-top: 20px;
+            width: 250px;
+        }
+        #stateContainer {
+            margin-top: 20px;
+        }
+        #currentState {
+            font-weight: bold;
+        }
+        #times, #grids {
+            margin-top: 20px;
+        }
+        #customImage {
+            width: 500px;  /* Set the width of the image */
+            height: 500px;  /* Set the height of the image */
+        }
+        #space1 {
+            width: 2px;
+            height: 2px;
+        }
+        #space2 {
+            width: 80px;
+            height: 80px;
+        }
+        
+
+
+    </style>
+</head>
+<body>
+    <div>
+        <div id="stackContainer"></div>
+        <button id="sendButton">Get Stack Content</button>
+        <button id="resetButton">Reset Stack</button>
+        <div id="stackSize">Stack Size: 0</div> 
+        <div id="stateContainer">
+            Current State: <span id="currentState">Idle</span>
+        </div>
+        <div id="times">
+            Times: <span id="times">0</span>
+        </div>
+        <div id="grids">
+            Grids: <span id="grids">0</span>
+        </div>
+
+    
+
+
+
+        <!-- 增加二分查找的列表输入框和目标值输入框 -->
+        <input id="binarySearchList" placeholder="Enter value List, separated by comma.">
+        <input id="binarySearchTarget" placeholder="Enter weight List, separated by comma.">
+        <input id="capacity" placeholder="Enter capacity.">
+        <button id="binarySearchButton">01PACKBAG</button>
+    </div>
+
+    <div class="vertical-layout">
+        <div id="dataContainer">input tape</div>
+        <div id="space1"></div>
+        <div id="worktapeContainer">work tape</div>
+        <div id="space1"></div>
+        <div id="outputtapeContainer">output tape</div>
+        <div id="space2"></div>
+        <!-- <img id="customImage" src="C:\Users\yosh20004\Pictures\FB9600A4DFDDF7C269E00057A92E9419.jpg" alt="your_image_name"> -->
+    </div>
+
+
+
+    <!-- <div id="stateContainer"></div> -->
+
+    <script>
+        window.onload = function() {
+            var socket = new WebSocket("ws://localhost:8888/01pakwebsocket");
+
+            socket.onopen = function(event) {
+                socket.send("Hello Server");
+            };
+
+            var data; 
+
+            document.getElementById('sendButton').addEventListener('click', function(){
+                socket.send("Update Stack");
+
+                var stackBottomElement = data[data.length - 1];
+                var regex = /^ ans\s=\s-?\d+$/;
+                if(regex.test(stackBottomElement)){
+                    alert(`结果已算出`);
+                }
+            });
+
+            document.getElementById('resetButton').addEventListener('click', function() {
+                socket.send("reset"); 
+                document.getElementById('stackSize').innerText = 'Stack Size: 0';
+            });
+
+            document.getElementById('binarySearchButton').addEventListener('click', function() {
+                var listInput = document.getElementById('binarySearchList');
+                var targetInput = document.getElementById('binarySearchTarget');
+                var capacity = document.getElementById('capacity');
+
+                if (!listInput.value.includes(',')) {
+                    alert('Please enter value list separated by commas.');
+                    return;
+                }
+
+                if (!targetInput.value.includes(',')) {
+                    alert('Please enter weight list separated by commas.');
+                    return;
+                }
+
+                if (isNaN(capacity.value)) {
+                    alert('Please enter a valid capacity.');
+                    return;
+                }
+
+                if (capacity.value == '') {
+                    alert('capacity is null.');
+                    return;
+                }
+
+                //检测输入中除了空格和数字和逗号之外的字符
+                for (var i = 0; i < listInput.value.length; i++) {
+                    if (listInput.value[i] != ' ' && listInput.value[i] != ',' && isNaN(listInput.value[i])) {
+                        alert('Please enter a valid value list.');
+                        return;
+                    }
+                }
+
+                //检测输入的最后一个字符不能是逗号
+                if (listInput.value[listInput.value.length - 1] == ',') {
+                    alert('Please enter a valid value list.');
+                    return;
+                }
+
+                //检测输入中除了空格和数字和逗号之外的字符
+                for (var i = 0; i < targetInput.value.length; i++) {
+                    if (targetInput.value[i] != ' ' && targetInput.value[i] != ',' && isNaN(targetInput.value[i])) {
+                        alert('Please enter a valid weight list.');
+                        return;
+                    }
+                }
+
+                //检测输入的最后一个字符不能是逗号
+                if (targetInput.value[targetInput.value.length - 1] == ',') {
+                    alert('Please enter a valid weight list.');
+                    return;
+                }
+
+                //检测两个输入的逗号数量是否相等(因为长度相等与否未必能说明输入合法性)
+
+                var listCommaCount = 0;
+                var targetCommaCount = 0;
+                for (var i = 0; i < listInput.value.length; i++) {
+                    if (listInput.value[i] == ',') {
+                        listCommaCount++;
+                    }
+                }
+                for (var i = 0; i < targetInput.value.length; i++) {
+                    if (targetInput.value[i] == ',') {
+                        targetCommaCount++;
+                    }
+                }
+                if (listCommaCount != targetCommaCount) {
+                    alert('the length of valueList and weightList is not equal.');  
+                    return;
+                }
+
+                var lv = listInput.value.split(',');
+                var lw = targetInput.value.split(',');
+
+                socket.send(JSON.stringify({
+                    action: 'binarySearch',
+                    lv: lv,
+                    lw: lw,
+                    target: Number(capacity.value)
+                })); 
+            });
+
+            socket.onmessage = function(event) {
+                console.log("Received data from server: ", event.data);
+                alldata = JSON.parse(event.data); 
+
+                var stackContainer = document.getElementById('stackContainer');
+                var dataContainer = document.getElementById('dataContainer');
+                var machineState = document.getElementById('currentState');
+
+                data = alldata.stack; //函数栈中元素
+
+                nums = alldata.input_tape; //二分查找的纸带
+
+                work_tape = alldata.work_tape; //二分查找的工作纸带
+
+                output_tape = alldata.output_tape; //二分查找的输出纸带
+
+                state = alldata.state; //二分查找的状态
+
+                times = alldata.times; //自动机状态转换的次数
+
+                input_pointer = alldata.input_pointer; //二分查找的输入指针
+
+                work_pointer = alldata.work_pointer; //二分查找的工作指针
+
+                output_pointer = alldata.output_pointer; //二分查找的输出指针
+
+                while(stackContainer.firstChild) {
+                    stackContainer.firstChild.remove();
+                }
+
+                while(dataContainer.firstChild) {
+                    dataContainer.firstChild.remove();
+                }
+
+                //先清空
+                while(worktapeContainer.firstChild) {
+                    worktapeContainer.firstChild.remove();
+                }
+
+                while (outputtapeContainer.firstChild) {
+                    outputtapeContainer.firstChild.remove();
+                }
+
+                for (var i = 0; i < nums.length; i++) {
+                    var dataElement = document.createElement('div');
+                    dataElement.textContent = nums[i];
+                    dataElement.className = 'dataElement';
+                    if (i === input_pointer){
+                        dataElement.style.backgroundColor = 'lightblue';
+                    }
+                    dataContainer.appendChild(dataElement);
+                }
+
+                for(var i = 0; i < data.length; i++) {
+                    var stackElement = document.createElement('div');
+                    stackElement.textContent = data[i];
+                    stackElement.className = 'stackElement';
+                    stackContainer.appendChild(stackElement);
+                }
+
+
+                for(var i = 0; i < work_tape.length; i++) {
+                    var worktapeElement = document.createElement('div');
+                    worktapeElement.textContent = work_tape[i];
+                    worktapeElement.className = 'dataElement';
+                    if (i === work_pointer){
+                        worktapeElement.style.backgroundColor = 'lightblue';
+                    }
+                    worktapeContainer.appendChild(worktapeElement);
+                }
+
+
+                for(var i = 0; i < output_tape.length; i++) {
+                    var outputtapeElement = document.createElement('div');
+                    outputtapeElement.textContent = output_tape[i];
+                    outputtapeElement.className = 'dataElement';
+                    if (i === output_pointer){
+                        outputtapeElement.style.backgroundColor = 'lightblue';
+                    }
+                    outputtapeContainer.appendChild(outputtapeElement);
+                }
+
+
+                if (data.longData) {
+                    var longDataElement = document.createElement('div');
+                    longDataElement.textContent = data.longData;
+                    longDataElement.className = 'dataElement';
+                    dataContainer.appendChild(longDataElement);
+                }
+
+                document.getElementById('stackSize').innerText = 'Stack Size: ' + data.length;
+                document.getElementById('currentState').innerText = state;
+                document.getElementById('times').innerText = 'Times: ' + times;
+                document.getElementById('grids').innerText = 'Grids: ' + work_tape.length;
+
+            };
+
+            socket.onclose = function(event) {
+                console.log("Client notified socket has closed",event);
+            };
+
+            socket.onerror = function(error) {
+                console.log("Error: " + error);
+            };
+        }
+    </script>
+</body>
+</html> 
